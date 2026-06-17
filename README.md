@@ -54,6 +54,38 @@ rank.py                  → orchestrates the above, outputs top 100 as CSV
 | Career growth | 15% | Tenure health, job-hopping pattern, architecture-drift detection (senior title with no hands-on signal) |
 | Platform signals | 15% | Recency of activity, open-to-work flag, recruiter response rate, notice period, GitHub activity |
 
+### Why these specific penalty values
+
+The penalties are multiplicative, not absolute zero, because none of these
+patterns alone proves someone is a bad fit -- they're strong negative signals
+that should dominate the score without making the system brittle to edge
+cases.
+
+- **Consulting-only (×0.35):** the mildest penalty of the four. Plenty of
+  strong engineers spend years at a consulting firm before moving to
+  product work, and the JD doesn't explicitly rule this out -- it's a
+  caution flag, not proof of unfitness.
+- **Research-only (×0.40):** similar logic. A strong research background
+  with zero production signal is a real gap against this specific JD's
+  "shipped to production" requirement, but research skills aren't worthless
+  for this role, hence not as severe as the honeypot penalty.
+- **Honeypot skill/duration mismatch (×0.10):** the harshest penalty,
+  deliberately. This pattern signals the profile itself may not be
+  trustworthy (claiming "expert" with near-zero usage), which is a
+  different and more serious problem than someone simply being a weaker
+  fit -- the JD and redrob_signals_doc both flag this as the trap the
+  challenge is explicitly testing for.
+- **Non-technical title with no real signal (×0.15):** the second-harshest
+  penalty, since this is the dataset's central, explicitly named trap
+  (sample_submission.csv's own #1-ranked candidate is this exact failure
+  mode). It's not ×0.0 because we deliberately avoid hard zeroing any
+  candidate -- a multiplicative floor keeps the system's behavior smooth
+  and auditable rather than introducing a discontinuous cliff.
+
+These values were set by reasoning about relative severity, not learned from
+labeled data -- see Limitations & Future Work in the deck for how we'd
+validate and tune them given more time.
+
 ### Hard disqualifiers (multiplicative penalty, not a hard zero)
 
 - **Consulting-only career** (TCS/Infosys/Wipro/Accenture/etc. with no product company experience) → ×0.35
