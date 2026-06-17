@@ -1,21 +1,9 @@
-"""
-rank.py
--------
-Entry point. Reads the full candidate pool, scores everyone, picks the top
-100, ranks them, and writes the submission CSV in the exact required format.
 
-Usage:
-    python rank.py --candidates ../data/candidates.jsonl --out ../output/submission.csv
-
-Constraints respected:
-    - No network calls, no LLM API calls.
-    - Pure Python / stdlib only at runtime (json, csv, argparse, time).
-    - Designed to run well under 5 minutes on 100K rows, CPU only.
-"""
 
 import argparse
 import csv
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -46,7 +34,10 @@ def load_and_score(candidates_path: str):
                 features = extract_features(candidate)
                 result = score_candidate(features)
                 reasoning = generate_reasoning(features, result)
-            except Exception:
+            except Exception as e:
+               
+                cid = candidate.get("candidate_id", f"line {line_num}")
+                print(f"[error] {cid}: {type(e).__name__}: {e}", file=sys.stderr)
                 skipped += 1
                 continue
 

@@ -34,6 +34,58 @@ NICE_TO_HAVE_SKILLS = {
     "open source", "oss",
 }
 
+# Synonym/alias map: real candidates often describe the same thing in
+# different words than our canonical skill vocab (e.g. "dense encoders"
+# instead of "embeddings", "SBERT" instead of "sentence-transformers").
+# This is a deliberate, explicit, offline alternative to calling an LLM
+# for semantic matching -- it closes some of the recall gap from pure
+# exact-substring matching without violating the no-network constraint.
+# Not exhaustive; expand as more synonyms are observed in the data.
+SKILL_ALIASES = {
+    "dense encoders": "embeddings",
+    "dense retrieval": "vector search",
+    "dense embeddings": "embeddings",
+    "sbert": "sentence-transformers",
+    "sentence bert": "sentence-transformers",
+    "sentencetransformer": "sentence-transformers",
+    "sentencetransformers": "sentence-transformers",
+    "semantic search": "vector search",
+    "approximate nearest neighbor": "vector search",
+    "ann search": "vector search",
+    "knn search": "vector search",
+    "vector store": "vector database",
+    "vector db": "vector database",
+    "opensearch service": "opensearch",
+    "rank correlation": "ndcg",
+    "mean average precision": "map",
+    "mean reciprocal rank": "mrr",
+    "normalized discounted cumulative gain": "ndcg",
+    "ab test": "a/b testing",
+    "split testing": "a/b testing",
+}
+
+# ---------------------------------------------------------------------------
+# Precompiled matchers -- built ONCE at module load, not per-candidate.
+# Compiling a fresh regex per term per candidate (65 terms x 100K candidates
+# = millions of compilations) is what caused a 6x runtime regression when
+# word-boundary matching was first introduced. A single combined pattern
+# with named-ish capture via alternation, scanned once per candidate, is
+# both correct (word-boundary, no false positives like "es" inside
+# "pipelines") and fast (one compiled regex, one scan per candidate).
+# ---------------------------------------------------------------------------
+
+
+def _build_term_pattern(terms):
+    # longest-first so multi-word terms aren't shadowed by shorter ones
+    sorted_terms = sorted(terms, key=len, reverse=True)
+    alternation = "|".join(re.escape(t) for t in sorted_terms)
+    return re.compile(r"\b(" + alternation + r")\b")
+
+
+_MUST_HAVE_PATTERN = _build_term_pattern(MUST_HAVE_SKILLS)
+_NICE_TO_HAVE_PATTERN = _build_term_pattern(NICE_TO_HAVE_SKILLS)
+_ALIAS_PATTERN = _build_term_pattern(SKILL_ALIASES.keys())
+
 # Title substrings that signal a NON-technical role wearing AI keywords
 # (this is the exact trap called out in job_description.docx)
 NON_TECHNICAL_TITLE_PATTERNS = re.compile(
@@ -51,7 +103,8 @@ TECHNICAL_TITLE_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-
+# Engineer/scientist titles that are NOT software/AI roles -- these should
+# NOT get the technical-title bonus even though "engineer" is in the name
 NON_AI_ENGINEER_PATTERNS = re.compile(
     r"\b(civil|mechanical|electrical|chemical|structural|industrial|"
     r"qa engineer|quality assurance)\b",
@@ -71,6 +124,16 @@ RESEARCH_ONLY_PATTERNS = re.compile(
 
 def _safe_lower(s):
     return (s or "").strip().lower()
+
+
+def _years_between(start_year, end_year):
+    if start_year is None or end_year is None:
+        return None
+    return max(0, end_year - start_year)
+
+
+def _months_to_years(months):
+    return round((months or 0) / 12.0, 2)
 
 
 def extract_features(candidate: dict) -> dict:
@@ -109,6 +172,7 @@ def extract_features(candidate: dict) -> dict:
     )
     all_titles = " ".join(_safe_lower(role.get("title", "")) for role in career)
     all_companies = [_safe_lower(role.get("company", "")) for role in career]
+    all_industries = [_safe_lower(role.get("industry", "")) for role in career]
 
     features["career_text_blob"] = f"{headline_text} {summary_text} {all_titles} {all_descriptions}"
 
@@ -122,7 +186,8 @@ def extract_features(candidate: dict) -> dict:
         any(firm in comp for firm in CONSULTING_FIRMS) for comp in all_companies
     )
 
-    # research-only flag: academia signals + barely any industry roles
+    # research-only flag: no career history roles look like industry roles,
+    # and education/summary heavily signals academia
     features["research_only_flag"] = bool(
         RESEARCH_ONLY_PATTERNS.search(summary_text)
         or RESEARCH_ONLY_PATTERNS.search(headline_text)
@@ -133,7 +198,8 @@ def extract_features(candidate: dict) -> dict:
         len(career) >= 3 and features["avg_tenure_months"] < 20
     )
 
-    # architecture-drift flag: senior title but no hands-on language in current role
+    # architecture-drift flag: current title senior/staff/principal but
+    # current role description has no hands-on coding language
     hands_on_terms = ("implement", "built", "wrote", "coded", "shipped", "deployed", "developed")
     current_role = next((r for r in career if r.get("is_current")), None)
     if current_role:
@@ -147,20 +213,34 @@ def extract_features(candidate: dict) -> dict:
 
     # ---------------- Skills ----------------
     skill_names_lower = {_safe_lower(s.get("name", "")) for s in skills}
-    matched_must_haves = {
-        s for s in MUST_HAVE_SKILLS
-        if s in skill_names_lower or s in features["career_text_blob"]
-    }
-    matched_nice_to_haves = {
-        s for s in NICE_TO_HAVE_SKILLS
-        if s in skill_names_lower or s in features["career_text_blob"]
-    }
+    career_blob = features["career_text_blob"]
+
+    # one regex scan per candidate per pattern, not one scan per term --
+    # this is what keeps the 100K-candidate run in the tens-of-seconds range
+    text_must_have_hits = set(_MUST_HAVE_PATTERN.findall(career_blob))
+    text_nice_to_have_hits = set(_NICE_TO_HAVE_PATTERN.findall(career_blob))
+    text_alias_hits = set(_ALIAS_PATTERN.findall(career_blob))
+
+    matched_must_haves = (skill_names_lower & MUST_HAVE_SKILLS) | text_must_have_hits
+    matched_nice_to_haves = (skill_names_lower & NICE_TO_HAVE_SKILLS) | text_nice_to_have_hits
+
+    # alias pass: catch synonym phrasing (e.g. "dense encoders" -> "embeddings",
+    # "SBERT" -> "sentence-transformers") that exact matching above would
+    # otherwise miss entirely
+    alias_hits_in_skill_names = {a for a in SKILL_ALIASES if a in skill_names_lower}
+    for alias in text_alias_hits | alias_hits_in_skill_names:
+        canonical = SKILL_ALIASES[alias]
+        if canonical in MUST_HAVE_SKILLS:
+            matched_must_haves.add(canonical)
+        elif canonical in NICE_TO_HAVE_SKILLS:
+            matched_nice_to_haves.add(canonical)
+
     features["must_have_skill_count"] = len(matched_must_haves)
     features["nice_to_have_skill_count"] = len(matched_nice_to_haves)
     features["matched_must_haves"] = sorted(matched_must_haves)
     features["matched_nice_to_haves"] = sorted(matched_nice_to_haves)
 
-    # honeypot signal: skill claimed at "expert"/"advanced" but near-zero duration
+    # honeypot signal: skill claimed at "expert" proficiency but near-zero duration
     honeypot_skill_hits = 0
     for s in skills:
         prof = _safe_lower(s.get("proficiency", ""))
@@ -212,10 +292,11 @@ def extract_features(candidate: dict) -> dict:
 
 
 if __name__ == "__main__":
+    # quick standalone sanity check against a tiny local sample file
     import sys
     path = sys.argv[1] if len(sys.argv) > 1 else "sample5.jsonl"
-    with open(path, "r", encoding="utf-8-sig") as fh:
-        for line in fh:
+    with open(path, "r", encoding="utf-8-sig") as f:
+        for i, line in enumerate(f):
             if not line.strip():
                 continue
             cand = json.loads(line)

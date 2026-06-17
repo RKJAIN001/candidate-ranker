@@ -1,12 +1,4 @@
-"""
-scorer.py
----------
-Takes the flat feature dict produced by feature_extractor.py and turns it
-into a single composite score (0-100) plus a breakdown of why.
-
-No LLM calls, no network. Pure arithmetic so it runs on 100K rows in seconds.
-"""
-
+from feature_extractor import MUST_HAVE_SKILLS
 WEIGHTS = {
     "skills_match": 0.30,
     "experience_fit": 0.25,
@@ -15,9 +7,11 @@ WEIGHTS = {
     "platform_signals": 0.15,
 }
 
+
+
 IDEAL_YOE_MIN = 5
 IDEAL_YOE_MAX = 9
-TOTAL_MUST_HAVES = 23  # len(MUST_HAVE_SKILLS) in feature_extractor.py
+TOTAL_MUST_HAVES = len(MUST_HAVE_SKILLS)
 
 
 def _clamp(x, lo=0.0, hi=1.0):
