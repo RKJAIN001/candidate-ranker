@@ -1,0 +1,2 @@
+# No external dependencies required at runtime.
+# rank.py uses only Python 3.x standard library (json, csv, argparse, time, pathlib, re, datetime).

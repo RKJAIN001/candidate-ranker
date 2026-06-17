@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+data/candidates.jsonl
+output/*.csv
+.DS_Store
