@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 data/candidates.jsonl
 output/*.csv
+!output/sample_output_preview.csv
 .DS_Store
