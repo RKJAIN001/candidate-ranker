@@ -1,0 +1,63 @@
+# Redrob Hackathon — Submission Metadata
+team_name: "RankRight"
+
+primary_contact:
+  name: "Rakshit Jain"
+  email: "jainrakshit069@gmail.com"
+  phone: "+91-8595503788"
+
+team_members:
+  - name: "Rakshit Jain"
+    email: "jainrakshit069@gmail.com"
+    role: "ML Engineer"
+  - name: "Liesha Gupta"
+    email: "guptaliesha2816@gmail.com"
+    role: "Data Engineer"
+
+github_repo: "https://github.com/RKJAIN001/candidate-ranker"
+
+sandbox_link: "https://colab.research.google.com/drive/1ae5bHP83DAeyMwVPZSVOzBWZrkHIUpuS?usp=sharing"
+
+reproduce_command: "python rank.py --candidates ../data/candidates.jsonl --out ../output/submission.csv"
+
+compute:
+  platform: "Windows laptop/PC"
+  cpu_cores: 6
+  ram_gb: 8
+  python_version: "3.13.7"
+  os: "Windows 10/11 (build 26200)"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
+  pre_computation_time_minutes: 0
+
+ai_tools_used:
+  - "Claude"
+
+ai_usage_summary: |
+  Used Claude for architecture design discussion, code generation, debugging,
+  and step-by-step guidance throughout the build. All code was reviewed,
+  tested, and verified against the real candidate dataset before being
+  committed. No candidate data was sent to any LLM API as part of the
+  ranking pipeline itself -- the final rank.py uses zero network calls and
+  zero LLM calls at runtime, only Python standard library logic.
+
+methodology_summary: |
+  Rule-based ranker with explicit, fact-grounded reasoning capture. Five
+  weighted scoring dimensions (skills match, experience fit, credentials,
+  career growth, platform/behavioral signals) derived directly from the job
+  description's stated must-haves and disqualifiers. Hard disqualifier
+  penalties (multiplicative, not absolute zero) catch consulting-only
+  careers, research-only backgrounds, honeypot skill/duration mismatches,
+  and the central keyword-stuffer trap: a non-technical title with no real
+  AI/ML signal in career history, regardless of listed skill keywords.
+  Verified on the full 100,000-candidate pool: 18-28 second runtime
+  (well under the 5-minute limit), 0% honeypot leakage and 0% keyword-stuffer
+  leakage in the top 100 shortlist, confirmed independently on two machines.
+
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
