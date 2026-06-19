@@ -8,10 +8,7 @@ primary_contact:
 team_members:
   - name: "Rakshit Jain"
     email: "jainrakshit069@gmail.com"
-    role: "ML Engineer"
-  - name: "Liesha Gupta"
-    email: "guptaliesha2816@gmail.com"
-    role: "Data Engineer"
+    role: "DATAEngineer"
   - name: "SAGAR JAIN"
     email: "thesagarjain8@gmail.com.com"
     role: "ML Engineer"

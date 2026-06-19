@@ -103,7 +103,7 @@ purely on keyword count.
 
 On the full 100,000-candidate pool, on a standard laptop CPU:
 
-- **Runtime: ~18-28 seconds** (well under the 5-minute limit)
+- **Runtime: ~77-85 seconds** (well under the 5-minute limit)
 - **Zero honeypots** in the top 100 (22 honeypot-pattern candidates exist in
   the full pool; none made the shortlist) — see `check_honeypots.py`
 - **Zero non-technical/keyword-stuffer titles** in the top 100 — see `check_quality.py`
