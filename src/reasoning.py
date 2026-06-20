@@ -1,13 +1,10 @@
-
-
-
-def _format_skill_list(skills, max_items=3):
+def _format_skill_list(skills, max_items=None):
     if not skills:
         return None
-    shown = skills[:max_items]
-    if len(skills) > max_items:
+    if max_items is not None and len(skills) > max_items:
+        shown = skills[:max_items]
         return f"{', '.join(shown)}, +{len(skills) - max_items} more"
-    return ", ".join(shown)
+    return ", ".join(skills)
 
 
 def generate_reasoning(features: dict, score_result: dict) -> str:
