@@ -40,7 +40,7 @@ methodology_summary: |
   careers, research-only backgrounds, honeypot skill/duration mismatches,
   and the central keyword-stuffer trap: a non-technical title with no real
   AI/ML signal in career history, regardless of listed skill keywords.
-  Verified on the full 100,000-candidate pool: 75-85 second runtime on a
+  Verified on the full 100,000-candidate pool: 60-80 second runtime on a
   6-core/8GB Windows laptop with normal background load
   (well under the 5-minute limit), 0% honeypot leakage and 0% keyword-stuffer
   leakage in the top 100 shortlist, confirmed independently on two machines.
