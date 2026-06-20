@@ -1,21 +1,7 @@
-"""
-feature_extractor.py
----------------------
-Turns one raw candidate JSON record into a flat dict of clean, numeric/boolean
-features that the scorer can consume. No LLM calls here -- pure parsing logic.
-
-Run standalone for a quick sanity check:
-    python feature_extractor.py
-"""
-
 import json
 import re
 from datetime import date, datetime
 
-
-# ---------------------------------------------------------------------------
-# Reference vocab pulled from the JD -- edit these lists if the JD changes
-# ---------------------------------------------------------------------------
 
 MUST_HAVE_SKILLS = {
     "sentence-transformers", "sentence transformers", "bge", "e5",
@@ -34,13 +20,7 @@ NICE_TO_HAVE_SKILLS = {
     "open source", "oss",
 }
 
-# Synonym/alias map: real candidates often describe the same thing in
-# different words than our canonical skill vocab (e.g. "dense encoders"
-# instead of "embeddings", "SBERT" instead of "sentence-transformers").
-# This is a deliberate, explicit, offline alternative to calling an LLM
-# for semantic matching -- it closes some of the recall gap from pure
-# exact-substring matching without violating the no-network constraint.
-# Not exhaustive; expand as more synonyms are observed in the data.
+
 SKILL_ALIASES = {
     "dense encoders": "embeddings",
     "dense retrieval": "vector search",
@@ -64,15 +44,7 @@ SKILL_ALIASES = {
     "split testing": "a/b testing",
 }
 
-# ---------------------------------------------------------------------------
-# Precompiled matchers -- built ONCE at module load, not per-candidate.
-# Compiling a fresh regex per term per candidate (65 terms x 100K candidates
-# = millions of compilations) is what caused a 6x runtime regression when
-# word-boundary matching was first introduced. A single combined pattern
-# with named-ish capture via alternation, scanned once per candidate, is
-# both correct (word-boundary, no false positives like "es" inside
-# "pipelines") and fast (one compiled regex, one scan per candidate).
-# ---------------------------------------------------------------------------
+
 
 
 def _build_term_pattern(terms):
@@ -86,8 +58,7 @@ _MUST_HAVE_PATTERN = _build_term_pattern(MUST_HAVE_SKILLS)
 _NICE_TO_HAVE_PATTERN = _build_term_pattern(NICE_TO_HAVE_SKILLS)
 _ALIAS_PATTERN = _build_term_pattern(SKILL_ALIASES.keys())
 
-# Title substrings that signal a NON-technical role wearing AI keywords
-# (this is the exact trap called out in job_description.docx)
+
 NON_TECHNICAL_TITLE_PATTERNS = re.compile(
     r"\b(hr|human resources|recruiter|recruiting|marketing|sales|"
     r"content writer|copywriter|graphic designer|accountant|"
@@ -103,8 +74,7 @@ TECHNICAL_TITLE_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-# Engineer/scientist titles that are NOT software/AI roles -- these should
-# NOT get the technical-title bonus even though "engineer" is in the name
+
 NON_AI_ENGINEER_PATTERNS = re.compile(
     r"\b(civil|mechanical|electrical|chemical|structural|industrial|"
     r"qa engineer|quality assurance)\b",

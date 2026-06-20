@@ -1,11 +1,4 @@
-"""
-reasoning.py
-------------
-Generates a 1-2 sentence, fact-grounded reasoning string for a candidate,
-given their feature dict and score result. No LLM calls -- pulled directly
-from real extracted fields so it's honest, varies naturally, and never
-hallucinates a skill the candidate doesn't have.
-"""
+
 
 
 def _format_skill_list(skills, max_items=3):
