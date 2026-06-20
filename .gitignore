@@ -4,4 +4,5 @@ __pycache__/
 data/candidates.jsonl
 output/*.csv
 !output/sample_output_preview.csv
+!output/submission.csv
 .DS_Store
